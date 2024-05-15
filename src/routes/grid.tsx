@@ -147,7 +147,6 @@ function GridComponent() {
 	const grid = useGridStore((s) => s.grid);
 	const nextElement = useGridStore((s) => s.nextElement);
 	const resetActiveElement = useGridStore((s) => s.resetActiveElement);
-	const activeElement = useGridStore((s) => s.activeElement);
 
 	const [intervalMs, setIntervalMs] = useState<number>(500);
 	const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
