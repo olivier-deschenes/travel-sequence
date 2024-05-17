@@ -74,17 +74,12 @@ function DepthComponent() {
 function CellComponent() {
 	const { index: columnIndex } = useColumnContext();
 	const { cell } = useCellContext();
-	const {
-		aisle: { leftSided, rightSided },
-	} = useAisleContext();
 
 	return (
 		<div
 			className={twMerge(
 				"flex flex-row bg-orange-500 group",
 				columnIndex % 2 === 0 ? "flex-row-reverse" : "flex-row",
-				rightSided && "flex-row",
-				leftSided && "flex-row-reverse",
 			)}
 		>
 			<div
@@ -137,13 +132,17 @@ function ColumnComponent() {
 			className={twMerge(
 				"flex bg-blue-500 justify-start",
 				index % 2 === 0 ? "flex-row" : "flex-row-reverse",
-				rightSided && "flex-row-reverse",
-				leftSided && "flex-row",
 				leftSided && "col-start-1",
 				rightSided && "col-start-2",
 			)}
 		>
-			<div className={twMerge("flex gap-1 flex-1")}>
+			<div
+				className={twMerge(
+					"flex gap-1 flex-1",
+					index % 2 === 0 ? "flex-row-reverse" : "flex-row",
+				)}
+				style={{ display: "flex" }}
+			>
 				{column.items.map((floor, floorIndex) => (
 					<FloorProvider
 						key={`floor-${floor.value}`}
@@ -160,7 +159,7 @@ function ColumnComponent() {
 }
 
 function AisleComponent() {
-	const { aisle } = useAisleContext();
+	const { aisle, index } = useAisleContext();
 
 	return (
 		<div className={"flex bg-red-500 flex-col"}>
@@ -169,14 +168,19 @@ function AisleComponent() {
 					"w-full flex bg-black text-4xl font-bold text-white justify-center items-center py-10"
 				}
 			>
-				{aisle.value}
+				{aisle.value} -{" "}
+				{JSON.stringify({
+					leftSided: aisle.leftSided,
+					rightSided: aisle.rightSided,
+					index: index,
+				})}
 			</div>
 			<div className={twMerge("grid p-5 grid-cols-2 gap-1.5")}>
 				{aisle.items.map((column, columnIndex) => (
 					<ColumnProvider
 						key={`column-${column.value}`}
 						column={column}
-						index={columnIndex}
+						index={aisle.leftSided ? 0 : aisle.rightSided ? 1 : columnIndex}
 					>
 						<ColumnComponent />
 					</ColumnProvider>

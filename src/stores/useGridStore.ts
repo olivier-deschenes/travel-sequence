@@ -220,8 +220,6 @@ export const useGridStore = create<GridStore>()(
                     leftSided: false,
                     rightSided: false,
                   });
-
-                  acc.sort();
                 }
                 const gridAisle = acc.find((a) => a.value === aisle)!;
 
@@ -233,7 +231,9 @@ export const useGridStore = create<GridStore>()(
                     travelSequence: -1,
                   });
 
-                  gridAisle.items.sort();
+                  gridAisle.items.sort((a, b) =>
+                    a.value.localeCompare(b.value)
+                  );
                 }
                 const gridColumn = gridAisle.items.find(
                   (a) => a.value === column
@@ -247,7 +247,9 @@ export const useGridStore = create<GridStore>()(
                     travelSequence: -1,
                   });
 
-                  gridColumn.items.sort();
+                  gridColumn.items.sort((a, b) =>
+                    a.value.localeCompare(b.value)
+                  );
                 }
                 const gridFloor = gridColumn.items.find(
                   (f) => f.value === floor
@@ -274,7 +276,7 @@ export const useGridStore = create<GridStore>()(
                     index,
                   });
 
-                  gridCell.items.sort();
+                  gridCell.items.sort((a, b) => a.value.localeCompare(b.value));
                 }
 
                 gridCell.value = cell;
@@ -319,6 +321,8 @@ export const useGridStore = create<GridStore>()(
                 ),
               };
             });
+
+          grid.sort((a, b) => a.travelSequence - b.travelSequence);
 
           set({ grid });
         },
