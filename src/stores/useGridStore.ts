@@ -38,6 +38,8 @@ export type RawGridItem = {
 export type Aisle = {
   value: string;
   items: Column[];
+  rightSided: boolean;
+  leftSided: boolean;
 } & Element;
 
 export type Grid = Aisle[];
@@ -72,8 +74,12 @@ export type GridStore = {
   buildGrid: () => void;
   resetState: () => void;
 
+  setActiveElementIndex: (index: number) => void;
+
   getActiveElement: () => Element["id"];
-  nextElement: () => void;
+
+  moveAction: (direction: "first" | "previous" | "next" | "last") => void;
+
   resetActiveElement: () => void;
 } & GridState;
 
@@ -120,15 +126,56 @@ export const useGridStore = create<GridStore>()(
         resetActiveElement: () => {
           set({ activeElementIndex: 0, activeElement: get().rawGrid[0] });
         },
-        nextElement: () => {
-          set((state) => {
-            const newActiveElementIndex = state.activeElementIndex + 1;
 
-            return {
-              activeElementIndex: newActiveElementIndex,
-              activeElement: state.rawGrid[newActiveElementIndex],
-            };
+        setActiveElementIndex: (index) => {
+          set((state) => {
+            if (index === state.activeElementIndex) {
+              return {
+                activeElementIndex: 0,
+                activeElement: state.rawGrid[0],
+              };
+            }
+
+            const activeElement = state.rawGrid[index];
+
+            return { activeElementIndex: index, activeElement };
           });
+        },
+
+        moveAction: (direction) => {
+          switch (direction) {
+            case "first":
+              set((prev) => ({
+                activeElementIndex: 0,
+                activeElement: prev.rawGrid[0],
+              }));
+              break;
+            case "previous":
+              set((state) => {
+                const index = Math.max(state.activeElementIndex - 1, 0);
+                const activeElement = state.rawGrid[index];
+
+                return { activeElementIndex: index, activeElement };
+              });
+              break;
+            case "next":
+              set((state) => {
+                const index = Math.min(
+                  state.activeElementIndex + 1,
+                  state.rawGrid.length - 1
+                );
+                const activeElement = state.rawGrid[index];
+
+                return { activeElementIndex: index, activeElement };
+              });
+              break;
+            case "last":
+              set((prev) => ({
+                activeElementIndex: prev.rawGrid.length - 1,
+                activeElement: prev.rawGrid[prev.rawGrid.length - 1],
+              }));
+              break;
+          }
         },
 
         setGrid: (grid) => set({ grid }),
@@ -170,6 +217,8 @@ export const useGridStore = create<GridStore>()(
                     items: [],
                     id: crypto.randomUUID(),
                     travelSequence: -1,
+                    leftSided: false,
+                    rightSided: false,
                   });
 
                   acc.sort();
@@ -262,6 +311,12 @@ export const useGridStore = create<GridStore>()(
                 ...ailse,
                 travelSequence: getLastTravelSequence(columns),
                 items: columns,
+                leftSided: columns.every(
+                  (column) => Number(column.value) % 2 === 0
+                ),
+                rightSided: columns.every(
+                  (column) => Number(column.value) % 2 !== 0
+                ),
               };
             });
 

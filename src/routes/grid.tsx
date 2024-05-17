@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { AisleProvider, useAisleContext } from "@/contexts/AisleContext";
 import { CellProvider, useCellContext } from "@/contexts/CellContext";
 import { ColumnProvider, useColumnContext } from "@/contexts/ColumnContext";
@@ -7,6 +8,14 @@ import { DepthProvider, useDepthContext } from "@/contexts/DepthContext";
 import { FloorProvider, useFloorContext } from "@/contexts/FloorContext";
 import { useGridStore } from "@/stores/useGridStore";
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import {
+	ChevronFirst,
+	ChevronLast,
+	ChevronLeft,
+	ChevronRight,
+	Pause,
+	Play,
+} from "lucide-react";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 
@@ -25,18 +34,39 @@ function DepthComponent() {
 	const { depth } = useDepthContext();
 	const activeElement = useGridStore((s) => s.activeElement);
 	const activeElementIndex = useGridStore((s) => s.activeElementIndex);
+	const setActiveElementIndex = useGridStore((s) => s.setActiveElementIndex);
 
 	const isActive = activeElement?.id === depth.id;
 
 	return (
 		<div
 			className={twMerge(
-				"flex flex-1 bg-purple-500 px-2.5 py-1 my-auto justify-start items-start",
+				"flex flex-1 bg-purple-500 px-2.5 relative py-1 my-auto justify-start items-start cursor-pointer hover:bg-gray-400",
 				isActive ? "bg-red-500" : "",
 				activeElementIndex > depth.index ? "bg-gray-500" : "",
 			)}
+			onClick={() => setActiveElementIndex(depth.index)}
+			onKeyDown={() => setActiveElementIndex(depth.index)}
 		>
-			<span className={"my-auto"}>{depth.location}</span>
+			<span className={"my-auto font-mono"}>{depth.location}</span>
+			<div
+				className={twMerge(
+					"absolute bottom-[120%] flex left-0 justify-center items-center w-full z-30",
+					isActive ? "visible" : "invisible",
+				)}
+			>
+				<div
+					className={twMerge(
+						"bg-red-600 rounded-md text-white p-2.5 z-30",
+						isActive ? "visible" : "invisible",
+					)}
+				>
+					<span className={"font-bold"}>*Here*</span>
+				</div>
+				<div
+					className={"bg-red-600 w-4 h-4 bottom-[-0.25rem] rotate-45 absolute"}
+				/>
+			</div>
 		</div>
 	);
 }
@@ -44,12 +74,17 @@ function DepthComponent() {
 function CellComponent() {
 	const { index: columnIndex } = useColumnContext();
 	const { cell } = useCellContext();
+	const {
+		aisle: { leftSided, rightSided },
+	} = useAisleContext();
 
 	return (
 		<div
 			className={twMerge(
 				"flex flex-row bg-orange-500 group",
 				columnIndex % 2 === 0 ? "flex-row-reverse" : "flex-row",
+				rightSided && "flex-row",
+				leftSided && "flex-row-reverse",
 			)}
 		>
 			<div
@@ -93,20 +128,22 @@ function FloorComponent() {
 
 function ColumnComponent() {
 	const { column, index } = useColumnContext();
+	const {
+		aisle: { leftSided, rightSided },
+	} = useAisleContext();
 
 	return (
 		<div
 			className={twMerge(
 				"flex bg-blue-500 justify-start",
 				index % 2 === 0 ? "flex-row" : "flex-row-reverse",
+				rightSided && "flex-row-reverse",
+				leftSided && "flex-row",
+				leftSided && "col-start-1",
+				rightSided && "col-start-2",
 			)}
 		>
-			<div
-				className={twMerge(
-					"flex gap-1 flex-1",
-					index % 2 === 0 ? "flex-row-reverse" : "flex-row",
-				)}
-			>
+			<div className={twMerge("flex gap-1 flex-1")}>
 				{column.items.map((floor, floorIndex) => (
 					<FloorProvider
 						key={`floor-${floor.value}`}
@@ -127,8 +164,14 @@ function AisleComponent() {
 
 	return (
 		<div className={"flex bg-red-500 flex-col"}>
-			{aisle.value}
-			<div className={"grid p-5 grid-cols-2 gap-1.5"}>
+			<div
+				className={
+					"w-full flex bg-black text-4xl font-bold text-white justify-center items-center py-10"
+				}
+			>
+				{aisle.value}
+			</div>
+			<div className={twMerge("grid p-5 grid-cols-2 gap-1.5")}>
 				{aisle.items.map((column, columnIndex) => (
 					<ColumnProvider
 						key={`column-${column.value}`}
@@ -145,15 +188,19 @@ function AisleComponent() {
 
 function GridComponent() {
 	const grid = useGridStore((s) => s.grid);
-	const nextElement = useGridStore((s) => s.nextElement);
+	const moveAction = useGridStore((s) => s.moveAction);
 	const resetActiveElement = useGridStore((s) => s.resetActiveElement);
+	const activeElementIndex = useGridStore((s) => s.activeElementIndex);
+	const rawGrid = useGridStore((s) => s.rawGrid);
+
+	const activeLocation = rawGrid[activeElementIndex];
 
 	const [intervalMs, setIntervalMs] = useState<number>(500);
 	const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
 
 	const startInterval = () => {
 		const interval = setInterval(() => {
-			nextElement();
+			moveAction("next");
 		}, intervalMs);
 
 		setIntervalId(interval);
@@ -179,27 +226,58 @@ function GridComponent() {
 		<div className={"flex flex-col gap-10 bg-black min-w-fit relative"}>
 			<div
 				className={
-					"flex-col gap-10 fixed bottom-0 flex items-center justify-center w-full"
+					"flex-col gap-10 fixed bottom-0 flex items-center justify-center w-full z-50"
 				}
 			>
-				<div className={"flex bg-white m-10 p-10 rounded-md flex-col"}>
-					<div className={"flex gap-5"}>
-						<Button onClick={nextElement}>Next</Button>
-						<Button onClick={resetActiveElement}>Reset</Button>
+				<div className={"flex bg-white m-10 p-2.5 rounded-md flex-col gap-2.5"}>
+					<div>
+						<h3 className={"font-bold text-xl"}>Travel Sequence Tools</h3>
 					</div>
 					<div>
+						<p>
+							<span className={"font-bold"}>Active Location:</span>{" "}
+							<span className={"font-mono"}>{activeLocation.location}</span>
+						</p>
+					</div>
+					<div className={"flex gap-1.5 justify-center items-center"}>
+						<Button onClick={() => moveAction("first")} size={"icon"}>
+							<ChevronFirst />
+						</Button>
+						<Button onClick={() => moveAction("previous")} size={"icon"}>
+							<ChevronLeft />
+						</Button>
+						<Button
+							onClick={intervalId ? stopInterval : startInterval}
+							size={"icon"}
+						>
+							{intervalId ? <Pause /> : <Play />}
+						</Button>
+						<Button onClick={() => moveAction("next")} size={"icon"}>
+							<ChevronRight />
+						</Button>
+						<Button onClick={() => moveAction("last")} size={"icon"}>
+							<ChevronLast />
+						</Button>
+					</div>
+					<div className="flex items-center space-x-2 max-w-full">
+						<Label>Interval</Label>
 						<Input
 							type="number"
 							min={1}
 							max={5000}
 							value={intervalMs}
 							onChange={onIntervalMsChange}
+							className={"flex flex-1"}
 						/>
-						<div>
-							<Button onClick={intervalId ? stopInterval : startInterval}>
-								{intervalId ? "Stop" : "Start"}
-							</Button>
-						</div>
+					</div>
+					<div>
+						<Button
+							onClick={resetActiveElement}
+							variant={"destructive"}
+							className={"w-full"}
+						>
+							Reset
+						</Button>
 					</div>
 				</div>
 			</div>

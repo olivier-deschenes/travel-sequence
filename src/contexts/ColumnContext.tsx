@@ -1,30 +1,30 @@
 /* eslint-disable react-refresh/only-export-components */
-import { Column } from "@/stores/useGridStore";
-import { PropsWithChildren, createContext, useContext } from "react";
+import type { Column } from "@/stores/useGridStore";
+import { type PropsWithChildren, createContext, useContext } from "react";
 
 type State = {
-  column: Column;
-  index: number;
+	column: Column;
+	index: number;
 };
 
 const Context = createContext<State | undefined>(undefined);
 
 export const useColumnContext = () => {
-  const context = useContext(Context);
+	const context = useContext(Context);
 
-  if (!context) {
-    throw new Error("useColumnContext must be used within an AisleProvider");
-  }
+	if (!context) {
+		throw new Error("useColumnContext must be used within an AisleProvider");
+	}
 
-  return context;
+	return context;
 };
 
 export const ColumnProvider = ({
-  column,
-  index,
-  children,
+	column,
+	index,
+	children,
 }: PropsWithChildren<State>) => {
-  return (
-    <Context.Provider value={{ column, index }}>{children}</Context.Provider>
-  );
+	return (
+		<Context.Provider value={{ column, index }}>{children}</Context.Provider>
+	);
 };
